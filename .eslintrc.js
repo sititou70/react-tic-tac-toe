@@ -17,6 +17,9 @@ module.exports = {
     "react"
   ],
   "rules": {
+    "no-console": [
+      "off"
+    ],
     "indent": [
       "error",
       2
@@ -33,6 +36,8 @@ module.exports = {
       "error",
       "always"
     ],
-    "react/jsx-uses-vars": 1
+    "react/jsx-uses-vars": [
+      1
+    ]
   }
 };
