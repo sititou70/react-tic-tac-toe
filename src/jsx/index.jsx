@@ -1,10 +1,10 @@
 const React = require("react");
 React;
 const ReactDom = require("react-dom");
-const hello = require("./hello.jsx");
+const Game = require("./Game.jsx");
 
 let run = () => {
-  ReactDom.render(<hello.HelloWorld name="react" />, document.querySelector("#root"));
+  ReactDom.render(<Game.Game />, document.querySelector("#game"));
 };
 
 exports.run = run;

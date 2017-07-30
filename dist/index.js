@@ -9793,7 +9793,7 @@ exports = module.exports = __webpack_require__(85)(undefined);
 
 
 // module
-exports.push([module.i, "", ""]);
+exports.push([module.i, "* {\n  margin: 0;\n  padding: 0;\n  outline: none; }\n\nbody {\n  font-size: 16px;\n  font-family: \"Century Gothic\", Futura, sans-serif; }\n\n.bg {\n  position: fixed;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100vh;\n  background: linear-gradient(10deg, #23002a, #00486f 50%);\n  z-index: -1; }\n\nh1 {\n  margin-top: 30px;\n  text-align: center;\n  color: #eee; }\n\n.view {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: center;\n  margin: 30px auto 0; }\n  .view__left {\n    width: 50vh;\n    height: 50vh;\n    max-width: 90vw;\n    max-height: 90vw;\n    margin: 0 20px 20px; }\n  .view__right {\n    margin: 0 30px; }\n\n.board {\n  display: flex;\n  flex-wrap: wrap;\n  width: 100%;\n  height: 100%; }\n  .board__cell {\n    display: block;\n    width: calc(100% / 3);\n    height: calc(100% / 3);\n    color: #eee;\n    font-size: calc(0.5rem + 12vh);\n    line-height: calc(100% / 3);\n    border: 1px solid #999;\n    background: none;\n    border-radius: 2vh;\n    cursor: pointer; }\n  .board .is-critical {\n    animation: is_critical 2s both infinite; }\n\n@keyframes is_critical {\n  0% {\n    background: rgba(35, 0, 42, 0); }\n  50% {\n    background: rgba(35, 0, 42, 0.5); }\n  100% {\n    background: rgba(35, 0, 42, 0); } }\n\n.information {\n  width: 8em;\n  max-width: 100vw;\n  color: #eee;\n  font-size: 1.5rem;\n  text-align: center; }\n\n.history {\n  color: #aaa;\n  margin: 20px 0;\n  text-align: center; }\n  .history__item a,\n  .history__item a:visited,\n  .history__item a:hover,\n  .history__item a:active {\n    display: inline-block;\n    padding: 7px;\n    color: #aaa; }\n  .history .is-active {\n    font-weight: bold; }\n", ""]);
 
 // exports
 
@@ -10341,10 +10341,10 @@ module.exports = function (css) {
 const React = __webpack_require__(49);
 React;
 const ReactDom = __webpack_require__(104);
-const hello = __webpack_require__(190);
+const Game = __webpack_require__(190);
 
 let run = () => {
-  ReactDom.render(React.createElement(hello.HelloWorld, { name: "react" }), document.querySelector("#root"));
+  ReactDom.render(React.createElement(Game.Game, null), document.querySelector("#game"));
 };
 
 exports.run = run;
@@ -22980,20 +22980,158 @@ module.exports = ReactDOMInvalidARIAHook;
 /***/ (function(module, exports, __webpack_require__) {
 
 const React = __webpack_require__(49);
+const player1 = Symbol("player1");
+const player2 = Symbol("player1");
+const player1_char = "X";
+const player2_char = "O";
 
-class HelloWorld extends React.Component {
+const calcCriticalCells = board => {
+  const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+
+  let critical_calls = [];
+
+  for (const line of lines) {
+    if (line.map(x => board[x]).reduce((s, x) => s === x ? x : null) !== null) critical_calls = critical_calls.concat(line);
+  }
+
+  return critical_calls.filter((x, i, self) => self.indexOf(x) === i);
+};
+
+const getBoardsDiff = (board1, board2) => {
+  for (let i = 0; i < board1.length; i++) {
+    if (board1[i] !== board2[i]) {
+      return {
+        index: i,
+        value1: board1[i],
+        value2: board2[i]
+      };
+    }
+  }
+
+  return null;
+};
+
+const Cell = props => {
+  const char = props.value === null ? "" : props.value === player1 ? player1_char : player2_char;
+  return React.createElement(
+    "button",
+    { className: `board__cell ${props.isCritical}`, onClick: props.onClick },
+    char
+  );
+};
+
+const Board = props => {
+  const critical_calls = calcCriticalCells(props.values);
+  const blocks = props.values.map((x, i) => {
+    const is_critical = critical_calls !== null && critical_calls.indexOf(i) !== -1 ? "is-critical" : "";
+    return React.createElement(Cell, { value: x, onClick: () => props.onClickButtons(i), isCritical: is_critical, key: `cell_${i}` });
+  });
+  return React.createElement(
+    "div",
+    { className: "board" },
+    blocks
+  );
+};
+
+const Information = props => {
+  const now_player = props.historyIndex % 2 === 0 ? player1_char : player2_char;
+  let information_text = "";
+
+  const now_critical_lines = calcCriticalCells(props.history[props.historyIndex]);
+
+  if (now_critical_lines.length === 0) {
+    if (props.historyIndex === 9) {
+      information_text = "Draw";
+    } else {
+      information_text = `Next Player : ${now_player}`;
+    }
+  } else {
+    const winner = props.historyIndex % 2 === 0 ? player2_char : player1_char;
+    information_text = `Winner : ${winner} !`;
+  }
+
+  return React.createElement(
+    "div",
+    { className: "information" },
+    information_text
+  );
+};
+
+const History = props => {
+  const items = props.history.map((x, i, self) => {
+    const is_active = i === props.historyIndex ? "is-active" : "";
+    let boards_diff;
+    if (i !== 0) {
+      boards_diff = getBoardsDiff(self[i - 1], self[i]);
+      boards_diff.value = boards_diff.value2 === player1 ? player1_char : player2_char;
+      boards_diff.x = Math.floor(boards_diff.index / 3);
+      boards_diff.y = boards_diff.index % 3;
+    }
+    return React.createElement(
+      "li",
+      { className: `history__item ${is_active}`, key: `history__item_${i}` },
+      React.createElement(
+        "a",
+        { onClick: () => props.onClickItem(i), href: "#" },
+        i === 0 ? "New Game Start" : `put ${boards_diff.value} to (${boards_diff.x}, ${boards_diff.y})`
+      )
+    );
+  });
+  return React.createElement(
+    "ol",
+    { className: "history" },
+    items
+  );
+};
+
+class Game extends React.Component {
+  constructor() {
+    super();
+
+    this.state = {
+      history: [Array.from({ length: 9 }, () => null)],
+      history_index: 0
+    };
+  }
+  onClickHandler(i) {
+    if (calcCriticalCells(this.state.history[this.state.history_index]).length !== 0) return;
+    if (this.state.history[this.state.history_index][i] !== null) return;
+
+    let new_history = this.state.history.slice(0, this.state.history_index + 1);
+    let new_history_index = this.state.history_index;
+
+    new_history.push(new_history[new_history.length - 1].slice());
+    new_history_index++;
+    new_history[new_history.length - 1][i] = new_history_index % 2 === 0 ? player2 : player1;
+
+    this.setState({
+      history: new_history,
+      history_index: new_history_index
+    });
+  }
+  setHistory(i) {
+    this.setState({ history_index: i });
+  }
   render() {
     return React.createElement(
-      "span",
-      null,
-      "Hello ",
-      this.props.name,
-      "!"
+      "div",
+      { className: "view" },
+      React.createElement(
+        "div",
+        { className: "view__left" },
+        React.createElement(Board, { values: this.state.history[this.state.history_index], onClickButtons: this.onClickHandler.bind(this) })
+      ),
+      React.createElement(
+        "div",
+        { className: "view__right" },
+        React.createElement(Information, { history: this.state.history, historyIndex: this.state.history_index }),
+        React.createElement(History, { history: this.state.history, historyIndex: this.state.history_index, onClickItem: this.setHistory.bind(this) })
+      )
     );
   }
 }
 
-exports.HelloWorld = HelloWorld;
+exports.Game = Game;
 
 /***/ })
 /******/ ]);
