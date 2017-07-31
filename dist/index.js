@@ -22981,7 +22981,7 @@ module.exports = ReactDOMInvalidARIAHook;
 
 const React = __webpack_require__(49);
 const player1 = Symbol("player1");
-const player2 = Symbol("player1");
+const player2 = Symbol("player2");
 const player1_char = "X";
 const player2_char = "O";
 
